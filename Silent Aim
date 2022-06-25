@@ -36,22 +36,15 @@ local tableinsert = table.insert
 -- // Silent Aim Vars
 getgenv().Aiming = {
     Enabled = true,
-
-    ShowFOV = false
-    ,
-    FOV = 35,
-    FOVSides = 100,
-    FOVColour = Color3fromRGB(0, 171, 255),
-
+    ShowFOV = true,
+    FOVSides = 15,
+    FOVColour = Color3fromRGB(231, 84, 128),
     VisibleCheck = true,
-    
-    HitChance = 500,
-
-    Selected = nil,
+    FOV = 30,
+    HitChance = 100,
+    Selected = LocalPlayer,
     SelectedPart = nil,
-
-    TargetPart = {"Head", "HumanoidRootPart" "LowerTorso"},
-
+    TargetPart = {"Head", "HumanoidRootPart"},
     Ignored = {
         Teams = {
             {
@@ -67,41 +60,30 @@ getgenv().Aiming = {
 }
 local Aiming = getgenv().Aiming
 
--- // Create circle
+-- // Show FOV
 local circle = Drawingnew("Circle")
 circle.Transparency = 1
 circle.Thickness = 2
 circle.Color = Aiming.FOVColour
 circle.Filled = false
-Aiming.FOVCircle = circle
-
--- // Update
 function Aiming.UpdateFOV()
-    -- // Make sure the circle exists
-    if not (circle) then
-        return
+    if (circle) then
+        -- // Set Circle Properties
+        circle.Visible = Aiming.ShowFOV
+        circle.Radius = (Aiming.FOV * 3)
+        circle.Position = Vector2new(Mouse.X, Mouse.Y + GetGuiInset(GuiService).Y)
+        circle.NumSides = Aiming.FOVSides
+        circle.Color = Aiming.FOVColour
+
+        -- // Return circle
+        return circle
     end
-
-    -- // Set Circle Properties
-    circle.Visible = Aiming.ShowFOV
-    circle.Radius = (Aiming.FOV * 3)
-    circle.Position = Vector2new(Mouse.X, Mouse.Y + GetGuiInset(GuiService).Y)
-    circle.NumSides = Aiming.FOVSides
-    circle.Color = Aiming.FOVColour
-
-    -- // Return circle
-    return circle
 end
 
 -- // Custom Functions
 local CalcChance = function(percentage)
-    -- // Floor the percentage
     percentage = mathfloor(percentage)
-
-    -- // Get the chance
     local chance = mathfloor(Randomnew().NextNumber(Randomnew(), 0, 1) * 100) / 100
-
-    -- // Return
     return chance <= percentage / 100
 end
 
@@ -112,19 +94,15 @@ function Aiming.IsPartVisible(Part, PartDescendant)
     local Origin = CurrentCamera.CFrame.Position
     local _, OnScreen = WorldToViewportPoint(CurrentCamera, Part.Position)
 
-    -- //
+    -- // If Part is on the screen
     if (OnScreen) then
-        -- // Vars
+        -- // Vars: Calculating if is visible
         local raycastParams = RaycastParamsnew()
         raycastParams.FilterType = EnumRaycastFilterTypeBlacklist
         raycastParams.FilterDescendantsInstances = {Character, CurrentCamera}
 
-        -- // Cast ray
         local Result = Raycast(Workspace, Origin, Part.Position - Origin, raycastParams)
-
-        -- // Make sure we get a result
         if (Result) then
-            -- // Vars
             local PartHit = Result.Instance
             local Visible = (not PartHit or IsDescendantOf(PartHit, PartDescendant))
 
@@ -144,8 +122,9 @@ function Aiming.IgnorePlayer(Player)
     local IgnoredPlayers = Ignored.Players
 
     -- // Find player in table
-    for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
-        -- // Make sure player matches
+    for i = 1, #IgnoredPlayers do
+        local IgnoredPlayer = IgnoredPlayers[i]
+
         if (IgnoredPlayer == Player) then
             return false
         end
@@ -163,10 +142,10 @@ function Aiming.UnIgnorePlayer(Player)
     local IgnoredPlayers = Ignored.Players
 
     -- // Find player in table
-    for i, IgnoredPlayer in ipairs(IgnoredPlayers) do
-        -- // Make sure player matches
+    for i = 1, #IgnoredPlayers do
+        local IgnoredPlayer = IgnoredPlayers[i]
+
         if (IgnoredPlayer == Player) then
-            -- // Remove from ignored
             tableremove(IgnoredPlayers, i)
             return true
         end
@@ -183,8 +162,9 @@ function Aiming.IgnoreTeam(Team, TeamColor)
     local IgnoredTeams = Ignored.Teams
 
     -- // Find team in table
-    for _, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
+    for i = 1, #IgnoredTeams do
+        local IgnoredTeam = IgnoredTeams[i]
+
         if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
             return false
         end
@@ -202,8 +182,9 @@ function Aiming.UnIgnoreTeam(Team, TeamColor)
     local IgnoredTeams = Ignored.Teams
 
     -- // Find team in table
-    for i, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
+    for i = 1, #IgnoredTeams do
+        local IgnoredTeam = IgnoredTeams[i]
+
         if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
             -- // Remove
             tableremove(IgnoredTeams, i)
@@ -231,8 +212,9 @@ function Aiming.IsIgnoredTeam(Player)
     local IgnoredTeams = Ignored.Teams
 
     -- // Check if team is ignored
-    for _, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
+    for i = 1, #IgnoredTeams do
+        local IgnoredTeam = IgnoredTeams[i]
+
         if (Player.Team == IgnoredTeam.Team and Player.TeamColor == IgnoredTeam.TeamColor) then
             return true
         end
@@ -249,10 +231,14 @@ function Aiming.IsIgnored(Player)
     local IgnoredPlayers = Ignored.Players
 
     -- // Loop
-    for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
+    for i = 1, #IgnoredPlayers do
+        local IgnoredPlayer = IgnoredPlayers[i]
+
         -- // Check if Player Id
-        if (typeof(IgnoredPlayer) == "number" and Player.UserId == IgnoredPlayer) then
-            return true
+        if (typeof(IgnoredPlayer) == "number") then
+            if (Player.UserId == IgnoredPlayer) then
+                return true
+            end
         end
 
         -- // Normal Player Instance
@@ -273,12 +259,11 @@ function Aiming.Raycast(Origin, Destination, UnitMultiplier)
 
         -- // Vars
         local Direction = (Destination - Origin).Unit * UnitMultiplier
-        local Result = Raycast(Workspace, Origin, Direction)
+        local RaycastResult = Raycast(Workspace, Origin, Direction)
 
-        -- // Make sure we have a result
-        if (Result) then
-            local Normal = Result.Normal
-            local Material = Result.Material
+        if (RaycastResult ~= nil) then
+            local Normal = RaycastResult.Normal
+            local Material = RaycastResult.Material
 
             return Direction, Normal, Material
         end
@@ -295,14 +280,10 @@ end
 
 -- // Check Health
 function Aiming.CheckHealth(Player)
-    -- // Get Humanoid
     local Character = Aiming.Character(Player)
     local Humanoid = FindFirstChildWhichIsA(Character, "Humanoid")
 
-    -- // Get Health
     local Health = (Humanoid and Humanoid.Health or 0)
-
-    -- //
     return Health > 0
 end
 
@@ -324,29 +305,20 @@ function Aiming.GetClosestTargetPartToCursor(Character)
     local ShortestDistance = 1/0
 
     -- //
-    local function CheckTargetPart(TargetPart)
-        -- // Convert string -> Instance
-        if (typeof(TargetPart) == "string") then
-            TargetPart = FindFirstChild(Character, TargetPart)
-        end
+    local function CheckTargetPart(TargetPartName)
+        local TargetPart = FindFirstChild(Character, TargetPartName)
 
-        -- // Make sure we have a target
-        if not (TargetPart) then
-            return
-        end
+        if (TargetPart) then
+            local PartPos, onScreen = WorldToViewportPoint(CurrentCamera, TargetPart.Position)
+            local Magnitude = (Vector2new(PartPos.X, PartPos.Y) - Vector2new(Mouse.X, Mouse.Y)).Magnitude
 
-        -- // Get the length between Mouse and Target Part (on screen)
-        local PartPos, onScreen = WorldToViewportPoint(CurrentCamera, TargetPart.Position)
-        local GuiInset = GetGuiInset(GuiService)
-        local Magnitude = (Vector2new(PartPos.X, PartPos.Y - GuiInset.Y) - Vector2new(Mouse.X, Mouse.Y)).Magnitude
-
-        -- //
-        if (Magnitude < ShortestDistance) then
-            ClosestPart = TargetPart
-            ClosestPartPosition = PartPos
-            ClosestPartOnScreen = onScreen
-            ClosestPartMagnitudeFromMouse = Magnitude
-            ShortestDistance = Magnitude
+            if (Magnitude < ShortestDistance) then
+                ClosestPart = TargetPart
+                ClosestPartPosition = PartPos
+                ClosestPartOnScreen = onScreen
+                ClosestPartMagnitudeFromMouse = Magnitude
+                ShortestDistance = Magnitude
+            end
         end
     end
 
@@ -362,7 +334,7 @@ function Aiming.GetClosestTargetPartToCursor(Character)
                 end
 
                 -- // Check it
-                CheckTargetPart(v)
+                CheckTargetPart(v.Name)
             end
         else
             -- // Individual
@@ -370,10 +342,10 @@ function Aiming.GetClosestTargetPartToCursor(Character)
         end
     end
 
-    -- //
+    -- // Loop through all target parts
     if (typeof(TargetParts) == "table") then
-        -- // Loop through all target parts and check them
-        for _, TargetPartName in ipairs(TargetParts) do
+        for i = 1, #TargetParts do
+            local TargetPartName = TargetParts[i]
             CheckTargetPart(TargetPartName)
         end
     end
@@ -399,13 +371,12 @@ function Aiming.GetClosestPlayerToCursor()
     end
 
     -- // Loop through all players
-    for _, Player in ipairs(GetPlayers(Players)) do
-        -- // Get Character
+    local AllPlayers = GetPlayers(Players)
+    for i = 1, #AllPlayers do
+        local Player = AllPlayers[i]
         local Character = Aiming.Character(Player)
 
-        -- // Make sure isn't ignored and Character exists
         if (Aiming.IsIgnored(Player) == false and Character) then
-            -- // Vars
             local TargetPartTemp, _, _, Magnitude = Aiming.GetClosestTargetPartToCursor(Character)
 
             -- // Check if part exists and health
@@ -435,7 +406,61 @@ Heartbeat:Connect(function()
     Aiming.GetClosestPlayerToCursor()
 end)
 
--- //
 return Aiming
 
--- // If you want the examples, look at the docs.
+-- // Examples // --
+
+--// Namecall Version // --
+
+--[[
+-- // Load Aiming Module
+local Aiming = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Aiming/Module.lua"))()
+
+-- // Hook
+local __namecall
+__namecall = hookmetamethod(game, "__namecall", function(...)
+    -- // Vars
+    local args = {...}
+    local self = args[1]
+    local method = getnamecallmethod()
+
+    -- // Checks
+    if (method == "FireServer") then
+        if (self.Name == "RemoteNameHere") then
+            -- change args
+
+            -- // Return changed arguments
+            return __namecall(unpack(args))
+        end
+    end
+
+    -- // Return
+    return __namecall(...)
+end)
+]]--
+
+-- // Index Version // --
+
+--[[
+-- // Load Aiming Module
+local Aiming = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Aiming/Module.lua"))()
+
+-- // Hook
+local __index
+__index = hookmetamethod(game, "__index", function(t, k)
+    -- // Check if it trying to get our mouse's hit or target
+    if (t:IsA("Mouse") and (k == "Hit" or k == "Target")) then
+        -- // If we can use the silent aim
+        if (Aiming.Check()) then
+            -- // Vars
+            local TargetPart = Aiming.SelectedPart
+
+            -- // Return modded val
+            return (k == "Hit" and TargetPart.CFrame or TargetPart)
+        end
+    end
+
+    -- // Return
+    return __index(t, k)
+end)
+]]--
